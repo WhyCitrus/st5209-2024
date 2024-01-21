@@ -1,0 +1,217 @@
+---
+title: "ST5209X Assignement1"
+author: "ZHAO LINGJIE"
+format: pdf
+---
+
+## Question 1 (Quarto)
+
+Read the [guide](https://quarto.org/docs/computations/r.html) on using Quarto with R and answer the following questions:
+
+a)  Write a code chunk that imports `tidyverse` and `fpp3`.
+
+    ```{r}
+    library(tidyverse)
+    library(fpp3)
+    ```
+
+b)  Modify the chunk so that only the following output is shown (i.e. the usual output about attaching packages and conflicts is not shown.)
+
+    ```{r,results = 'hide'}
+    library(tidyverse)
+    library(fpp3)
+    ```
+
+c)  Modify the chunk so that it is executed but no code is shown at all when rendered to a pdf.
+
+```{r,echo = FALSE}
+library(tidyverse)
+library(fpp3)
+```
+
+d)  Modify the document so that your name is printed on it beneath the title.
+
+## Question 2 (Livestock)
+
+Consider the `aus_livestock` dataset loaded in the `fpp3` package.
+
+a)  Use `filter()` to extract a time series comprising the monthly total number of pigs slaughtered in Victoria, Australia, from Jul 1972 to Dec 2018.
+
+    ```{r}
+    pigs_vic <- aus_livestock %>%
+      filter(State == "Victoria", 
+             Animal == "Pigs", 
+             Month >= yearmonth("1972 Jul") & Month <= yearmonth("2018 Dec"))
+    pigs_vic
+    ```
+
+    ```{r}
+    Slaughtered_Pigs <- aus_livestock |> filter(Animal=='Pigs',State=='Victoria') |>
+    filter(Month>=yearmonth("1972-07") & Month<=yearmonth("2018-12") )
+    Slaughtered_Pigs
+    ```
+
+b)  Make a time plot of the resulting time series.
+
+    ```{r warning=FALSE}
+    pigs_vic %>%
+      autoplot(Count) +
+      labs(title = "Monthly Total Number of Pigs Slaughtered in Victoria (Jul 1972 - Dec 2018)",
+           x = "Year-Month",
+           y = "Number of Pigs Slaughtered")
+    ```
+
+    ```{r warning=FALSE}
+    Slaughtered_Pigs |>
+    ggplot(aes(x = Month, y = Count)) +
+    geom_line() +
+    labs(title = "Monthly Total Number of Pigs Slaughtered in Victoria (Jul 1972 - Dec 2018)",
+    x = "Year-Month",
+    y = "Number of Pigs")
+
+    ```
+
+## Question 3 (Data cleaning)
+
+Inspect the function `process_sgcpi()` located in `_code/clean_data.R`. This function is used to convert the raw Consumer Price Index (CPI) data in `_data/raw/sg-cpi.csv` into a tsibble, stored in `_data/cleaned/sgcpi.rds`.
+
+a)  In line 9, what does `skip = 10` and `n_max = 152` do? Why do we need to do this when reading the csv file?
+
+    **`skip = 10`**: This parameter is used to skip the first 10 lines at the beginning of the CSV file when reading it. This is usually because the first few lines of the file might contain titles, descriptions, or other non-data content. By skipping these lines, you can start reading the actual data rows directly.
+
+    **`n_max = 152`**: This parameter specifies to read at most 152 rows of data during the reading process. This is very useful for limiting the size of the dataset, especially when you're only interested in a part of the data in the file. It helps avoid loading too much unnecessary data, thereby improving processing efficiency.
+
+b)  In line 14, what does `t()` do? Why do we need to do this in order to make a tsibble?
+
+    **`t()`** is the transpose function in R, used to transpose the rows and columns of a matrix or dataframe. In processing time series data, usually, each column in the original data represents a time point, and each row represents different variables or observations.
+
+    To convert the data into a time series format (tsibble), the dataframe needs to be transposed so that each row represents a time point and each column represents different variables. This is a common data format in time series analysis and facilitates subsequent processing and analysis.
+
+## Question 4 (Beer production)
+
+Consider the `aus_production` dataset loaded in the `fpp3` package. We will study the column measuring the production of beer.
+
+a)  Make a time plot of the beer production time series.
+
+    ```{r warning=FALSE}
+    aus_production
+    aus_production |>
+    autoplot(Beer)+labs(title = "Australian Quarterly Beer Production",
+    x = "Quarter",
+    y = "Beer Production (Megalitres)")
+    ```
+
+b)  Describe the observed trend.
+
+    1.  **Trend**: There appears to be an increasing trend in beer production starting from the early years of the series and leveling off in later years. The production increases steadily up to around the 1990s, after which it fluctuates around a more constant level.
+
+    2.  **Seasonality**: There is a clear seasonal pattern within each year. The production of beer seems to peak in certain quarters regularly, which suggests a seasonal influence on beer production.
+
+c)  Make a seasonal plot.
+
+    ```{r warning=FALSE}
+    beer_produced <- aus_production |> select(Quarter,Beer) |> as_tsibble(index=Quarter)
+    beer_produced
+    gg_season(beer_produced,y=Beer)
+    ```
+
+d)  What is the period of the seasonality?
+
+    The periodic nature of the seasonality is likely quarterly, as the data is quarterly. This would suggest that the period of the seasonality is one year, with the pattern repeating every four quarters.
+
+e)  Describe the seasonal behavior.
+
+    There are clear and consistent seasonal patterns within each year. Beer production peaks in certain quarters and troughs in others. Specifically, it appears that there is a peak in the later quarters of the year, which might correspond to increased beer production in anticipation of the summer season in the holiday period.
+
+## Question 5 (Pelts)
+
+Consider the `pelt` dataset loaded in the `fpp3` package, which measures the Hudson Bay Company trading records for Snowshoe Hare and Canadian Lynx furs from 1845 to 1935.
+
+a)  Plot both time series on the same axes. *Hint: Use `pivot_longer()` to create a key column*.
+
+    ```{r}
+    pelt_long <- pelt|>
+      pivot_longer(cols = c('Hare', 'Lynx'), names_to = "Company", values_to = "Count")
+     pelt_long
+    ```
+
+    ```{r warning=FALSE}
+    pelt_long |>
+    ggplot(aes(x = Year, y = Count, color = Company)) +
+    geom_line() +
+    labs(title = "Snowshoe Hare and Canadian Lynx Pelts (1845 - 1935)",
+    x = "Year",
+    y = "Number of Pelts") +
+    theme_minimal()
+    ```
+
+b)  What happens when you try to use `gg_season()` to the lynx fur time series? What is producing the error?
+
+    [It said Error in gg_season(pelt,y=lynx), the data must contain at least one observation per seasonal period. Though gg_season() can estimate the period itself and pelt is a tsibble dataset, it looks like lynx doesn’t have so called seasonality, at least with time unit–year.]{.underline}
+
+c)  Make a lag plot with the first 20 lags. Which lags display strong positive correlation? Which lags display strong negative correlation? Verify this with the time plot.
+
+    ```{r warning=FALSE}
+    pelt_long|>filter(Company=="Hare")%>%
+    gg_lag(y=Count,"geom"="point",lags=1:20) +
+    scale_x_continuous(labels = function(x) paste0(x / 1000, "k")) +
+    scale_y_continuous(labels = function(x) paste0(x / 1000, "k"))+
+    labs(title = "Lag Plots_Hare")+
+    theme_minimal()
+    ```
+
+    ```{r warning=FALSE}
+    pelt_long|>filter(Company=="Lynx")%>%
+    gg_lag(y=Count,"geom"="point",lags=1:20) +
+    scale_x_continuous(labels = function(x) paste0(x / 1000, "k")) +
+    scale_y_continuous(labels = function(x) paste0(x / 1000, "k"))+
+    labs(title = "Lag Plots_Lynx")+
+    theme_minimal()
+    ```
+
+d)  If you were to guess the seasonality period based on the lag plot, what would it be?
+
+    -   **Strong Positive Correlation**:\
+        Appears at lags where the points cluster along a line running from the bottom left to the top right.\
+        This is particularly visible at lags like 1, 2, and possibly 11 and 12.
+
+    -   **Strong Negative Correlation**:\
+        This is indicated by points clustering along a line running from the top left to the bottom right. This pattern is less pronounced in the Lynx series but might be suggested at lags like 4 and 5.
+
+e)  Use the provided function \``gg_custom_season()` in `_code/plot_util.R`[^1] to make a seasonal plot for lynx furs with the period that you guessed.[^2] Does the resulting plot suggest seasonality? Why or why not?
+
+    ```{r warning=FALSE}
+    gg_custom_season <- function(data, y, period, start = 1) {
+      # Make a seasonal plot with period specified in integer
+      # start argument specifies the row number that will be the first season
+      # in the period
+      y <- enquo(y)
+      data |>
+        mutate(Season = (row_number() - start) %% period + start,
+               Iteration = as.factor((row_number() - start) %/% period + 1)) |>
+        ggplot(aes(x = Season, y = !!y, color = Iteration)) +
+        geom_line()
+    }
+    ```
+
+    ```{R}
+    gg_custom_season(pelt,y=Lynx,period=10)
+    ```
+
+[^1]: You can load this function using `source("../_code/plot.util.R")`.
+
+[^2]: Unfortunately, it seems \``gg_season()` does not allow this functionality.
+
+To determine if the plot suggests seasonality:
+
+1.  **Consistency**: We look for a consistent pattern that repeats every cycle. Seasonality is suggested if the same pattern of movement (e.g., peaks and troughs) appears at the same point in each cycle.
+
+2.  **Pattern**: The plot should show regularity in the data points, meaning the values for each season (or point in the cycle) should follow a predictable pattern.
+
+From the image:
+
+-   There is a **variation** in the lynx counts, indicating there are changes over time.
+
+-   However, the lines representing different iterations do not seem to follow a **consistent pattern**. The peaks and troughs do not align in a way that suggests a clear, predictable cycle.
+
+Given the irregularity and lack of a clear repeating pattern, the plot does not strongly suggest seasonality, at least not with a 10-year cycle. Instead, it might suggest other forms of cyclical behavior or external factors affecting the population dynamics of lynx.
